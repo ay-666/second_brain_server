@@ -1,11 +1,11 @@
 import client from "../client";
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, CookieOptions } from "express";
 import { ErrorTypes } from "../types";
 import { userSchema, userInputType } from "../schemas/user.schema";
 import { ApiResponse } from "../../utils/ApiResponse";
 import { ApiError } from "../../utils/ApiError";
 import bcrypt from "bcrypt";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
 export const registerUser = async (req: Request, res: Response) => {
   let { username, password } = req.body;
@@ -46,7 +46,7 @@ export const registerUser = async (req: Request, res: Response) => {
       data: userInput,
     });
 
-    res.status(200).json(new ApiResponse(200, "User registered successfully."));
+    res.status(200).json(new ApiResponse(200,{},"User registered successfully."));
     return;
   } catch (error) {
     res.status(500).json(new ApiError(500, "Internal Server Error"));
@@ -89,22 +89,50 @@ export const loginUser = async (req: Request, res: Response) => {
       res.status(403).json(new ApiError(411, "Wrong email password"));
       return;
     }
-    console.log(existingUser);
+    
     const isMatch = await bcrypt.compare(
       userInput.password,
       existingUser.password
     );
+
     if (!isMatch) {
       res.status(403).json(new ApiError(411, "Wrong email password"));
       return;
     }
 
-    const token =  jwt.sign({ id: existingUser.id, username: existingUser.username },process.env.JWT_SECRET as string,{
-        expiresIn:'1d'
-    });
+    const token = jwt.sign(
+      { id: existingUser.id, username: existingUser.username },
+      process.env.JWT_SECRET as string,
+      {
+        expiresIn: "1h",
+      }
+    );
 
+    const cookieOptions: Readonly <CookieOptions> = {
+      httpOnly: true,
+      secure:true
+    }
+
+    res.status(200).cookie("jwt",token,cookieOptions).json(new ApiResponse(200,{
+      "token": token
+    },"Login Success"));
+    
   } catch (error) {
     res.status(500).json(new ApiError(500, "Internal Server Error"));
     return;
   }
+
 };
+
+export const signOutUser = async (req:Request, res:Response, next:NextFunction) =>{
+  try{
+    const cookieOptions : CookieOptions = {
+      httpOnly:true,
+      secure:true
+    }
+    res.status(200).clearCookie('jwt',cookieOptions).json(new ApiResponse(200,{},"Logout Success"))
+  }catch(error){
+    res.status(500).json(new ApiError(500,"Server Error"))
+  }
+}
+
