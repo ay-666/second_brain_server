@@ -116,7 +116,11 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     res.status(200).cookie("jwt",token,cookieOptions).json(new ApiResponse(200,{
-      "token": token
+      "token": token,
+      user:{
+        id:existingUser.id,
+        username:existingUser.username
+      }
     },"Login Success"));
     
   } catch (error) {
