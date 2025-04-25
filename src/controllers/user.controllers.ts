@@ -104,13 +104,15 @@ export const loginUser = async (req: Request, res: Response) => {
       { id: existingUser.id, username: existingUser.username },
       process.env.JWT_SECRET as string,
       {
-        expiresIn: "1h",
+        expiresIn: "1d",
       }
     );
 
+    const isProd = process.env.NODE_ENV ? process.env.NODE_ENV === 'production' : true ;
+
     const cookieOptions: Readonly <CookieOptions> = {
       httpOnly: true,
-      secure:true
+      secure:isProd
     }
 
     res.status(200).cookie("jwt",token,cookieOptions).json(new ApiResponse(200,{
@@ -136,3 +138,13 @@ export const signOutUser = async (req:Request, res:Response, next:NextFunction) 
   }
 }
 
+export const checkUser = async(req:Request,res:Response)=>{
+  //@ts-ignore
+  const user = req?.user;
+
+  if(!user){
+    res.status(404).json(new ApiError(404,"Invalid user"))
+    return;
+  }
+  res.status(200).json(new ApiResponse(200,user,"User exists"))
+}
